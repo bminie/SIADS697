@@ -14,7 +14,20 @@ st.set_page_config(
     layout="wide"
 )
 st.title("Hospital Recommendation Engine")
-
+expander = st.expander("Learn More")
+expander.write(
+    """
+    Elective procedures in the US have been frequently canceled over the past 2 years since COVID began; just as things were returning to normal, hospitals are now facing capacity issues and canceling elective procedures. 
+    However, disease has no regard for COVID and continues to adversely human health, untreated. 
+    Receiving healthcare is already an overly opaque and complex process - recent events have only made things more difficult. 
+    We've created an open-source, web-based tool to help people navigate which US hospitals to get treatment at for elective procedures based on value-based care measures and convenience. 
+    Our recommendation engine takes user input (e.g. type of procedure needed, location, etc), along with weighted user priorities for model features (e.g. cost of care, quality of care, etc), to provide a “top 3 hospitals” to attain care with regard to COVID-19 (or future disease) prevalence in various geographies.
+    
+    To use this application, enter the requested information on the left. When the app first starts up, all required data will be retrieved, loaded, and cached (i.e. saved) to save on resources and compute time.
+    Each time you change one of the parameters, your recommendations and the results displayed will be update.
+    The question "Do you want to see COVID-19 data by county?" has no effect on the recommendatons, just what is displayed on the map.
+    """
+)
 
 @st.cache(ttl=3*60*60, suppress_st_warning=True)
 def load_state_locations():
