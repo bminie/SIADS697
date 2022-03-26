@@ -75,6 +75,7 @@ hospital_gdf = load_hospital_locations()
 hospital_ratings = load_hospital_ratings()
 merged = merge_hospital_locaion_ratings(hospital_gdf, hospital_ratings)
 
+st.sidebar.text("Please Select Your Recommendation \nParameters")
 selected_state = st.sidebar.selectbox(
     "Select the state of interest",
     sorted(state_locations.State.unique())
@@ -101,7 +102,8 @@ st.text("In this section you will find information on the hospitals that are rec
 st.table(selected_hospitals[["NAME","ADDRESS","CITY","STATE","TELEPHONE"]])
 
 st.subheader("Map of Recommended Hospitals")
-st.text("In this section you will find an interactive map showing the recommended hospital locations")
+st.text('In this section you will find an interactive map showing the recommended hospital locations\n'
+        'COVID-19 data will be deployed depending on your answer to "Do you want to see COVID-19 data by county?"')
 m = folium.Map()
 if display_covid == "Yes":
     m = community_covid.explore(column="Cases_last_7_days", legend=True)
