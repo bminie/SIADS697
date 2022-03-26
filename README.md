@@ -17,8 +17,13 @@ conda env create -f environment.yml
 conda create --name <env_name> --file requirements.txt
 ```
 ### Starting the Streamlit App
-Ensure that you are in the app directory and run the following command to start the streamlit app
+Ensure that you are in the app directory and run the following command to start the streamlit app.
+
+The first command to activate the virtual environment is what will be used if you used the environment.yml to create the conda environment.
+
+The command may different slightly depending on your OS and conda version. Update the command appropriately for your OS and conda version.
 ```commandline
+conda activate team_care
 streamlit run streamlit_app.py
 ```
 ### Streamlit App Usage
