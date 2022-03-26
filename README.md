@@ -1,7 +1,3 @@
-# SIADS697 Capstone
-This repo will contain data and code related to the SIADS697 Capstone which is part of the MADS program at the University of Michigan.
-Repo and README will be updated as the project progresses.
-
 # Team Care: Hospital Recommendation System
 ## Overview
 Elective procedures in the US have been frequently canceled over the past 2 years since COVID began; just as things were returning to normal, hospitals are now facing capacity issues and canceling elective procedures. 
