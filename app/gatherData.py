@@ -1,9 +1,10 @@
+import csv
 import numpy as np
 import pandas as pd
 import geopandas as gpd
 import urllib.parse
 import requests
-import json
+
 
 def query_arcgis_feature_server(url_feature_server=''):
     '''
@@ -157,3 +158,13 @@ def query_arcgis_feature_server(url_feature_server=''):
               f'the final GeoDataFrame: ObjectID={this_id}\tOccurrences={n_times}')
 
     return geodata_final
+
+
+def query_cms_api(url):
+    response = requests.get(url)
+    reader = csv.reader(response.text.splitlines())
+    rows = []
+    for row in reader:
+        rows.append(row)
+    df = pd.DataFrame(rows[1:], columns=rows[0])
+    return df

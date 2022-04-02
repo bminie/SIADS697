@@ -5,7 +5,7 @@ import streamlit as st
 import geopandas as gpd
 import matplotlib.pyplot as plt
 from streamlit_folium import folium_static
-from gatherData import query_arcgis_feature_server
+from gatherData import *
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
@@ -29,6 +29,7 @@ expander.write(
     """
 )
 
+
 @st.cache(ttl=3*60*60, suppress_st_warning=True)
 def load_state_locations():
     file_path = os.path.join(os.getcwd(), "data", "statelatlong.csv")
@@ -49,17 +50,56 @@ def load_hospital_locations():
 
 @st.cache(ttl=3*60*60, suppress_st_warning=True)
 def load_hospital_ratings():
-    file_path = os.path.join(os.getcwd(), "data", "Hospital_General_Information.csv")
-    df = pd.read_csv(file_path).iloc[:, :13].drop(columns=['Phone Number', 'Meets criteria for promoting interoperability of EHRs'])
-    df = df[df["Hospital overall rating"] != "Not Available"]
-    df["Hospital overall rating"] = df["Hospital overall rating"].astype(int)
-    #df['Emergency Services'] = [1 if x == 'Yes' else 0 for x in df['Emergency Services']]
+    df = query_cms_api("https://data.cms.gov/provider-data/api/1/datastore/query/xubh-q36u/0/download?format=csv")
+    df = df.iloc[:, :13].drop(columns=['phone_number', 'meets_criteria_for_promoting_interoperability_of_ehrs'])
+    df = df[df["hospital_overall_rating"] != "Not Available"]
+    df["hospital_overall_rating"] = df["hospital_overall_rating"].astype(int)
     return df
+
+
+@st.cache(ttl=3*60*60, suppress_st_warning=True)
+def load_hospital_survey():
+    question_type_dict = {'H_COMP_1_A_P': "nurses",
+                          'H_NURSE_RESPECT_A_P': "nurses",
+                          'H_NURSE_LISTEN_A_P': "nurses",
+                          'H_NURSE_EXPLAIN_A_P': "nurses",
+                          'H_COMP_2_A_P': "doctors",
+                          'H_DOCTOR_RESPECT_A_P': "doctors",
+                          'H_DOCTOR_LISTEN_A_P': "doctors",
+                          'H_DOCTOR_EXPLAIN_A_P': "doctors",
+                          'H_COMP_3_A_P': "patients",
+                          'H_CALL_BUTTON_A_P': "patients",
+                          'H_BATH_HELP_A_P': "patients",
+                          'H_COMP_5_A_P': "staffs",
+                          'H_MED_FOR_A_P': "staffs",
+                          'H_SIDE_EFFECTS_A_P': "staffs"
+                          }
+    df = query_cms_api("https://data.cms.gov/provider-data/api/1/datastore/query/dgck-syfz/0/download?format=csv")
+    df = df[['facility_id', 'hcahps_measure_id', 'hcahps_question', 'hcahps_answer_percent']]
+    df['hcahps_answer_percent'] = pd.to_numeric(df['hcahps_answer_percent'], errors='coerce')
+    df = df.dropna(axis=0)
+    counts = df.groupby(['facility_id']).count()
+    filtered_counts = counts[counts['hcahps_question'] == 72].reset_index()
+    valid_facility_id = list(filtered_counts['facility_id'])
+    df = df[df['facility_id'].isin(valid_facility_id)]
+    df["measurement_type"] = df.apply(lambda row: question_type_dict[row["hcahps_measure_id"]] if row["hcahps_measure_id"] in question_type_dict.keys() else "UNKNOWN", axis=1)
+    grouped = df.groupby(['facility_id', 'measurement_type']).mean()
+    grouped = grouped.drop("UNKNOWN", level="measurement_type").reset_index()
+    pivot = grouped.pivot(index="facility_id", columns="measurement_type", values="hcahps_answer_percent").reset_index()
+    pivot.columns.name = None
+    return pivot
+
+
+@st.cache(ttl=3*60*60, suppress_st_warning=True, allow_output_mutation=True)
+def merge_hospital_rating_survey(ratings, survey):
+    merged = ratings.merge(survey, on="facility_id").dropna().reset_index()
+    merged = merged.drop(labels=['index', 'hospital_type', 'hospital_ownership'], axis=1)
+    return merged
 
 
 @st.cache(ttl=3*60*60, suppress_st_warning=True, allow_output_mutation=True)
 def merge_hospital_locaion_ratings(locations, ratings):
-    merged = locations.merge(ratings, left_on="NAME", right_on="Facility Name")
+    merged = locations.merge(ratings, left_on="NAME", right_on="facility_name")
     return merged
 
 
@@ -86,7 +126,9 @@ def generate_static_map(community_covid, selected_hospitals):
 state_locations = load_state_locations()
 hospital_gdf = load_hospital_locations()
 hospital_ratings = load_hospital_ratings()
-merged = merge_hospital_locaion_ratings(hospital_gdf, hospital_ratings)
+hospital_survey = load_hospital_survey()
+location_ratings = merge_hospital_locaion_ratings(hospital_gdf, hospital_ratings)
+survey_ratings = merge_hospital_rating_survey(hospital_ratings, hospital_survey)
 
 st.sidebar.text("Please Select Your Recommendation \nParameters")
 selected_state = st.sidebar.selectbox(
@@ -106,9 +148,9 @@ display_covid = st.sidebar.selectbox(
 community_data = gather_covid_data()
 community_covid = community_data[community_data.State_Abbreviation == selected_state]
 state_location = state_locations[state_locations["State"] == selected_state]
-selected_hospitals = merged[merged['STATE'] == selected_state]
-selected_hospitals = selected_hospitals[selected_hospitals["Hospital overall rating"] >= rating]
-selected_hospitals = selected_hospitals[selected_hospitals["Emergency Services"] == emergency_services]
+selected_hospitals = location_ratings[location_ratings['STATE'] == selected_state]
+selected_hospitals = selected_hospitals[selected_hospitals["hospital_overall_rating"] >= rating]
+selected_hospitals = selected_hospitals[selected_hospitals["emergency_services"] == emergency_services]
 
 st.subheader("Information on Recommended Hospitals")
 st.text("In this section you will find information on the hospitals that are recommended to you")
