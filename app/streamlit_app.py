@@ -120,7 +120,22 @@ def generate_static_map(community_covid, selected_hospitals):
     return f
 
 
-#def recommend_hospitals(hospitals, patient):
+def recommend_hospitals(hospitals, user):
+    collab_filtered = hospitals[hospitals['state'] == user["selected_state"]]
+    collab_filtered = collab_filtered[collab_filtered["hospital_overall_rating"] >= user["hospital_rating"]]
+    collab_filtered = collab_filtered[collab_filtered["emergency_services"] == user["emergency_services"]]
+
+    hospital_arr = np.array([collab_filtered['doctors'],
+                             collab_filtered['nurses'],
+                             collab_filtered['patients'],
+                             collab_filtered['staffs']]).reshape([-1, 4], order='F')
+    user_arr = np.array([user['doctor_rating'],
+                         user['nurses_rating'],
+                         user['patient_rating'],
+                         user['staff_rating']]).reshape(-1, 4)
+    cosim = cosine_similarity(hospital_arr, user_arr)
+    collab_filtered['Cosine Similarity'] = [values[0] for values in cosim]
+    return collab_filtered.sort_values('Cosine Similarity', ascending=False).reset_index()
 
 
 state_locations = load_state_locations()
@@ -131,46 +146,59 @@ location_ratings = merge_hospital_locaion_ratings(hospital_gdf, hospital_ratings
 survey_ratings = merge_hospital_rating_survey(hospital_ratings, hospital_survey)
 
 st.sidebar.text("Please Select Your Recommendation \nParameters")
-selected_state = st.sidebar.selectbox(
-    "Select the state of interest",
-    sorted(state_locations.State.unique())
-)
-rating = st.sidebar.slider("Select minimum hospital rating", 0, 5)
-emergency_services = st.sidebar.selectbox(
-    "Do you need emergency services?",
-    ["Yes", "No"]
-)
-display_covid = st.sidebar.selectbox(
-    "Do you want to see COVID-19 data by county?",
-    ["Yes", "No"]
-)
+with st.sidebar.form(key="my_form"):
+    selected_state = st.selectbox(
+        "Select the state of interest",
+        sorted(state_locations.State.unique())
+    )
+    emergency_services = st.selectbox(
+        "Do you need emergency services?",
+        ["Yes", "No"]
+    )
+    rating = st.slider("Select minimum hospital rating", 1, 5)
+    doctor_rating = st.slider("Specify your ideal doctor rating", 1, 100)
+    nurses_rating = st.slider("Specify your ideal nurses rating", 1, 100)
+    staff_rating = st.slider("Specify your ideal staff rating", 1, 100)
+    patient_rating = st.slider("Specify your ideal patient rating", 1, 100)
+    display_covid = st.selectbox(
+        "Do you want to see COVID-19 data by county?",
+        ["Yes", "No"]
+    )
+    pressed = st.form_submit_button("Generate Recommendations")
 
 community_data = gather_covid_data()
 community_covid = community_data[community_data.State_Abbreviation == selected_state]
 state_location = state_locations[state_locations["State"] == selected_state]
-selected_hospitals = location_ratings[location_ratings['STATE'] == selected_state]
-selected_hospitals = selected_hospitals[selected_hospitals["hospital_overall_rating"] >= rating]
-selected_hospitals = selected_hospitals[selected_hospitals["emergency_services"] == emergency_services]
 
-st.subheader("Information on Recommended Hospitals")
-st.text("In this section you will find information on the hospitals that are recommended to you")
-st.table(selected_hospitals[["NAME","ADDRESS","CITY","STATE","TELEPHONE"]])
+if pressed:
+    selected_hospitals = recommend_hospitals(survey_ratings, {"hospital_rating": rating,
+                                         "emergency_services": emergency_services,
+                                         "selected_state": selected_state,
+                                         "doctor_rating": doctor_rating,
+                                         "nurses_rating": nurses_rating,
+                                         "patient_rating": patient_rating,
+                                         "staff_rating": staff_rating})
+    st.subheader("Information on Recommended Hospitals")
+    st.text("In this section you will find information on the hospitals that are recommended to you")
+    st.table(selected_hospitals)
 
-st.subheader("Map of Recommended Hospitals")
-st.text('In this section you will find an interactive map showing the recommended hospital locations\n'
-        'COVID-19 data will be deployed depending on your answer to "Do you want to see COVID-19 data by county?"')
-m = folium.Map()
-if display_covid == "Yes":
-    m = community_covid.explore(column="Cases_last_7_days", legend=True)
-else:
-    m = folium.Map(location=[state_location["Latitude"], state_location["Longitude"]], zoom_start=6)
-if len(selected_hospitals) != 0:
-    selected_hospitals.apply(lambda row:folium.Marker(location=[row["LATITUDE"], row["LONGITUDE"]],
-                                                      tooltip=row["NAME"]).add_to(m), axis=1)
-folium_static(m)
+    st.subheader("Map of Recommended Hospitals")
+    st.text('In this section you will find an interactive map showing the recommended hospital locations\n'
+            'COVID-19 data will be deployed depending on your answer to "Do you want to see COVID-19 data by county?"')
+    m = folium.Map()
+    if display_covid == "Yes":
+        m = community_covid.explore(column="Cases_last_7_days", legend=True)
+    else:
+        m = folium.Map(location=[state_location["Latitude"], state_location["Longitude"]], zoom_start=6)
+    if len(selected_hospitals) != 0:
+        selected_locations = selected_hospitals.merge(location_ratings, on="facility_id")
+        selected_locations.apply(lambda row: folium.Marker(location=[row["LATITUDE"], row["LONGITUDE"]],
+                                                           tooltip=row["NAME"]).add_to(m), axis=1)
+    folium_static(m)
 
-if display_covid == "Yes":
-    st.subheader("COVID-19 Information By County")
-    st.text('In this section you will find information on COVID-19 if you selected "Yes" to the question "Do you want '
+    if display_covid == "Yes":
+        st.subheader("COVID-19 Information By County")
+        st.text(
+            'In this section you will find information on COVID-19 if you selected "Yes" to the question "Do you want '
             'to see COVID-19 data by county?"')
-    st.table(community_covid.drop("geometry", axis=1))
+        st.table(community_covid.drop("geometry", axis=1))
