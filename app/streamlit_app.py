@@ -1,5 +1,6 @@
 import os.path
 import folium
+import random
 import pandas as pd
 import streamlit as st
 import geopandas as gpd
@@ -54,6 +55,7 @@ def load_hospital_ratings():
     df = df.iloc[:, :13].drop(columns=['phone_number', 'meets_criteria_for_promoting_interoperability_of_ehrs'])
     df = df[df["hospital_overall_rating"] != "Not Available"]
     df["hospital_overall_rating"] = df["hospital_overall_rating"].astype(int)
+    df = df[df['emergency_services'] == 'Yes']
     return df
 
 
@@ -122,20 +124,50 @@ def generate_static_map(community_covid, selected_hospitals):
 
 def recommend_hospitals(hospitals, user):
     collab_filtered = hospitals[hospitals['state'] == user["selected_state"]]
-    collab_filtered = collab_filtered[collab_filtered["hospital_overall_rating"] >= user["hospital_rating"]]
-    collab_filtered = collab_filtered[collab_filtered["emergency_services"] == user["emergency_services"]]
-
-    hospital_arr = np.array([collab_filtered['doctors'],
-                             collab_filtered['nurses'],
-                             collab_filtered['patients'],
-                             collab_filtered['staffs']]).reshape([-1, 4], order='F')
+    #collab_filtered = collab_filtered[collab_filtered["hospital_overall_rating"] >= user["hospital_rating"]]
+    #collab_filtered = collab_filtered[collab_filtered["emergency_services"] == user["emergency_services"]]
+    hospital_arr = collab_filtered[['doctors', 'nurses', 'staffs', 'patients']].to_numpy()
     user_arr = np.array([user['doctor_rating'],
                          user['nurses_rating'],
-                         user['patient_rating'],
-                         user['staff_rating']]).reshape(-1, 4)
-    cosim = cosine_similarity(hospital_arr, user_arr)
-    collab_filtered['Cosine Similarity'] = [values[0] for values in cosim]
-    return collab_filtered.sort_values('Cosine Similarity', ascending=False).reset_index()
+                         user['staff_rating'],
+                         user['patient_rating']]).reshape(1, -1)
+    cosim = cosine_similarity(user_arr, hospital_arr)[0]
+    collab_filtered['Cosine Similarity'] = cosim
+    return collab_filtered.sort_values('Cosine Similarity', ascending=False).reset_index().iloc[0:10]
+
+
+def random_query_generator(state_abbreviations, n=5):
+    qs = [[random.choice(state_abbreviations),
+                random.randint(70, 100),
+                random.randint(50, 100),
+                random.randint(0, 100),
+                random.randint(0, 100)] for i in range(n)]
+    df_queries = pd.DataFrame(qs,
+                              columns=['selected_state', 'doctor_rating', 'nurses_rating', 'staff_rating', 'patient_rating'])
+    return df_queries
+
+
+def evaluation_pre_rec(queries, hospitals, n=5):
+    pre_at_n, rec_at_n = {}, {}
+    for i in range(len(queries)):
+        query = queries.iloc[i].to_dict()
+        recommendations = recommend_hospitals(hospitals, query)
+        print('query #' + str(i + 1) + ': ' + str(len(recommendations)) + ' recommendations generated')
+
+        hosp_rel = hospitals[(hospitals['state'] == query['selected_state'])]
+        hosp_rel = hosp_rel.replace('Not Available', np.nan)
+        hosp_rel = hosp_rel.sort_values(by=['hospital_overall_rating'], ascending=False)
+        hosp_rel = hosp_rel[hosp_rel['hospital_overall_rating'] == hosp_rel['hospital_overall_rating'].values.max()]
+        if (n != -1) and (n <= len(recommendations)):
+            recommendations = recommendations[:n]
+        numerator = len(set(recommendations['facility_id']).intersection(hosp_rel['facility_id']))
+        if numerator != 0:
+            pre_at_n['q' + str(i + 1)] = numerator / len(recommendations)
+            rec_at_n['q' + str(i + 1)] = numerator / len(hosp_rel)
+        else:
+            pre_at_n['q' + str(i + 1)] = 0
+            rec_at_n['q' + str(i + 1)] = 0
+    return pre_at_n, rec_at_n
 
 
 state_locations = load_state_locations()
@@ -144,6 +176,7 @@ hospital_ratings = load_hospital_ratings()
 hospital_survey = load_hospital_survey()
 location_ratings = merge_hospital_locaion_ratings(hospital_gdf, hospital_ratings)
 survey_ratings = merge_hospital_rating_survey(hospital_ratings, hospital_survey)
+community_data = gather_covid_data()
 
 st.sidebar.text("Please Select Your Recommendation \nParameters")
 with st.sidebar.form(key="my_form"):
@@ -151,11 +184,11 @@ with st.sidebar.form(key="my_form"):
         "Select the state of interest",
         sorted(state_locations.State.unique())
     )
-    emergency_services = st.selectbox(
-        "Do you need emergency services?",
-        ["Yes", "No"]
-    )
-    rating = st.slider("Select minimum hospital rating", 1, 5)
+    #emergency_services = st.selectbox(
+    #    "Do you need emergency services?",
+    #    ["Yes", "No"]
+    #)
+    #rating = st.slider("Select minimum hospital rating", 1, 5)
     doctor_rating = st.slider("Specify your ideal doctor rating", 1, 100)
     nurses_rating = st.slider("Specify your ideal nurses rating", 1, 100)
     staff_rating = st.slider("Specify your ideal staff rating", 1, 100)
@@ -166,21 +199,17 @@ with st.sidebar.form(key="my_form"):
     )
     pressed = st.form_submit_button("Generate Recommendations")
 
-community_data = gather_covid_data()
 community_covid = community_data[community_data.State_Abbreviation == selected_state]
 state_location = state_locations[state_locations["State"] == selected_state]
 
 if pressed:
-    selected_hospitals = recommend_hospitals(survey_ratings, {"hospital_rating": rating,
-                                         "emergency_services": emergency_services,
+    selected_hospitals = recommend_hospitals(survey_ratings, {#"hospital_rating": rating,
+                                         #"emergency_services": emergency_services,
                                          "selected_state": selected_state,
                                          "doctor_rating": doctor_rating,
                                          "nurses_rating": nurses_rating,
                                          "patient_rating": patient_rating,
                                          "staff_rating": staff_rating})
-    st.subheader("Information on Recommended Hospitals")
-    st.text("In this section you will find information on the hospitals that are recommended to you")
-    st.table(selected_hospitals)
 
     st.subheader("Map of Recommended Hospitals")
     st.text('In this section you will find an interactive map showing the recommended hospital locations\n'
@@ -196,9 +225,20 @@ if pressed:
                                                            tooltip=row["NAME"]).add_to(m), axis=1)
     folium_static(m)
 
+    st.subheader("Information on Recommended Hospitals")
+    st.text("In this section you will find information on the hospitals that are recommended to you")
+    st.table(selected_hospitals)
+
     if display_covid == "Yes":
         st.subheader("COVID-19 Information By County")
         st.text(
             'In this section you will find information on COVID-19 if you selected "Yes" to the question "Do you want '
             'to see COVID-19 data by county?"')
         st.table(community_covid.drop("geometry", axis=1))
+
+    # Add in support for displaying recommendation system results
+    queries = random_query_generator(state_locations["State"], 100)
+    pre_at_n, rec_at_n = evaluation_pre_rec(queries, survey_ratings, 10)
+    st.dataframe(queries)
+    st.write("Precision: {}".format(pre_at_n))
+    st.write("Recall: {}".format(rec_at_n))
