@@ -283,7 +283,9 @@ st.markdown(
     Our hospital recommendation engine has a two-step process: filter the hospital data based on the user's selected 
     state and conduct cosine similarity for the user's ideal ratings for doctors, nurses, staff, and patients against 
     all filtered hospitals to return those hospitals that are most similar (i.e. highest cosine similarity) with the 
-    user's preferences
+    user's preferences. The hospital recommendations are collected and presented to the user along with a map of their 
+    locations. An interactive example is provided in section V. Mapping Recommended Hospital Locations and Ease of 
+    Practical Use.
     """)
 
 st.header("IV. Recommendation System Evaluation and Metrics")
@@ -327,11 +329,11 @@ state_location = state_locations[state_locations["State"] == selected_state]
 
 if pressed:
     recommended = recommend_hospitals(survey_ratings,
-                                             {"selected_state": selected_state,
-                                              "doctor_rating": doctor_rating,
-                                              "nurses_rating": nurses_rating,
-                                              "patient_rating": patient_rating,
-                                              "staff_rating": staff_rating})
+                                      {"selected_state": selected_state,
+                                       "doctor_rating": doctor_rating,
+                                       "nurses_rating": nurses_rating,
+                                       "patient_rating": patient_rating,
+                                       "staff_rating": staff_rating})
 
     st.subheader("Map of Recommended Hospitals")
     st.text('In this section you will find an interactive map showing the recommended hospital locations\n'
