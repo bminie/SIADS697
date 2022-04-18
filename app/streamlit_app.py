@@ -146,6 +146,40 @@ def evaluation_pre_rec(queries, hospitals, n=-1):
     return pre_at_n, rec_at_n
 
 
+@st.cache(ttl=3*60*60, suppress_st_warning=True)
+def evaluation_mean_avg_pre(queries, hospitals, cutoff=-1):
+    avg_pre = []
+    all_pres = []
+
+    for i in range(len(queries)):
+        precisions = []
+        query = queries.iloc[i].to_dict()
+        recommendations = recommend_hospitals(hospitals, query)
+        hosp_rel = hospitals[hospitals['state'] == query['selected_state']]
+        hosp_rel = hosp_rel.sort_values(by=['hospital_overall_rating'], ascending=False)
+        hosp_rel = hosp_rel[hosp_rel['hospital_overall_rating'] == hosp_rel['hospital_overall_rating'].values.max()]
+        retrieved = recommendations
+        not_retrieved = []
+        if (cutoff != -1) and (cutoff <= len(recommendations)):
+            retrieved = recommendations[:cutoff]
+            not_retrieved = recommendations[cutoff:]
+        for j in range(1, len(retrieved) + 1):
+            docs = retrieved[:j]
+            if docs.iloc[-1]['facility_id'] in hosp_rel['facility_id'].tolist():
+                numerator = len(set(docs['facility_id']).intersection(hosp_rel['facility_id']))
+                if numerator != 0:
+                    precisions.append(numerator/len(docs))
+                else:
+                    precisions.append(0)
+        for doc in not_retrieved:
+            if doc in hosp_rel:
+                precisions.append(0)
+        avg_pre.append(sum(precisions) / len(hosp_rel))
+        all_pres.append(sum(precisions) / len(hosp_rel))
+    mean_avg_pre = sum(all_pres) / len(all_pres)
+    return avg_pre, mean_avg_pre
+
+
 st.set_page_config(
     page_title="Hospital Recommendation Engine to Receive Optimal Care"
 )
@@ -289,11 +323,18 @@ st.markdown(
     """)
 
 st.header("IV. Recommendation System Evaluation and Metrics")
-# Add in support for displaying recommendation system results
 queries = random_query_generator(state_locations["State"], 5000)
 pre_at_n, rec_at_n = evaluation_pre_rec(queries, survey_ratings, 10)
+avg_pre, mean_avg_pre = evaluation_mean_avg_pre(queries, survey_ratings, 10)
+st.markdown(
+    """
+    Mean Average Precision: {}
+    
+    NDCG: {}
+    """.format(mean_avg_pre, "TBD"))
 queries["Precision"] = pre_at_n
 queries["Recall"] = rec_at_n
+queries["Average Precision"] = avg_pre
 st.markdown(hide_table_row_index, unsafe_allow_html=True)
 st.table(queries.head(5))
 pre_hist = alt.Chart(queries).mark_bar().encode(
@@ -304,7 +345,11 @@ rec_hist = alt.Chart(queries).mark_bar().encode(
     alt.X("Recall:Q", bin=True),
     y="count()",
 ).properties(title="Histogram of Recall for 5000 Test Queries")
-st.altair_chart((pre_hist | rec_hist))
+avg_pre_hist = alt.Chart(queries).mark_bar().encode(
+    alt.X("Average Precision:Q", bin=True),
+    y="count()",
+).properties(title="Histogram of Average Precision for 5000 Test Queries")
+st.altair_chart((pre_hist | rec_hist | avg_pre_hist), use_container_width=True)
 
 st.header("V. Mapping Recommended Hospital Locations and Ease of Practical Use")
 community_data = gather_covid_data()
@@ -385,5 +430,5 @@ st.markdown(
     Our hospital recommendation engine can be modified for a range of events and users. For instance, the COVID-19 
     overlay can be changed to another global pandemic’s data should it become prevalent. Furthermore, we can wrap our 
     model in an LSTM by capturing user feedback on the accuracy of our model and refining it in real-time accordingly. 
-    This would likely require setting up AWS servers to retain data and run a cloud cluster for the LSTM, though.
+    This would likely require setting up AWS servers to retain data and run a cloud cluster for LSTM.
     """)
