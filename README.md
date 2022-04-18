@@ -26,11 +26,6 @@ The command may different slightly depending on your OS and conda version. Updat
 conda activate team_care
 streamlit run streamlit_app.py
 ```
-### Streamlit App Usage
-The streamlit app itself actually pulls double duty, it functions as a blog post as well as an interactive application 
-for users to get hospital recommendations. Once the app has been started, there are various sections that detail the 
-background of the project, evaluation metrics, etc. One of those sections is the section where users can enter their 
-inputs and receive recommendations.
 ## Application Data Overview
 There are a variety of data sources that are used as part of this application, some that are static and do not change 
 (these can be found in the app/data directory) and others that are gathered each time the application is started as 
@@ -69,28 +64,28 @@ from https://www.kaggle.com/datasets/andrewmvd/us-hospital-locations
   * CMS Stars
   * Patient Survey (HCAHPS)
 * COVID-19 dataset
-
-Current data in data folder was acquired on February 23, 2022 by manually downloading files. In the future, these files should be automatically pulled down using API's or other access methods in order to be working off the most recent data.
-* Community_Profile_Report_Counties.csv
-    * County level COVID-19 data pulled from https://protect-public.hhs.gov/
-* Community_Profile_Report_Counties.zip
-    * County level COVID-19 data pulled from https://protect-public.hhs.gov/ . This is a zipped GEOJSON file that includes coordinates to draw counties on a map. File as zipped due to file size restrictions with standard GitHub account
-* hospitalizations.csv
-    * Hospitalization data collected from state websites by the COVID-19 Hospitalization Tracking Project Team, pulled from https://carlsonschool.umn.edu/mili-misrc-covid19-tracking-project/download-data
-* hospitalizations.json
-    * Hospitalization data collected from state websites by the COVID-19 Hospitalization Tracking Project Team, pulled from https://carlsonschool.umn.edu/mili-misrc-covid19-tracking-project/download-data
-* hospitalizations.xlsx
-    * Hospitalization data collected from state websites by the COVID-19 Hospitalization Tracking Project Team, pulled from https://carlsonschool.umn.edu/mili-misrc-covid19-tracking-project/download-data
-* Data from The Centers for Medicare & Medicaid Services website
-    * Hospital Readmissions Reduction Program: https://data.cms.gov/provider-data/dataset/9n3s-kdb3
-    * Hospital-Acquired Condition (HAC) Reduction Program: https://data.cms.gov/provider-data/dataset/yq43-i98g
-    * Unplanned Hospital Visits - Hospital: https://data.cms.gov/provider-data/dataset/632h-zaca
-    * Payment and value of care - Hospital: https://data.cms.gov/provider-data/dataset/c7us-v4mf
-    * Patient survey (HCAHPS) - Hospital: https://data.cms.gov/provider-data/dataset/dgck-syfz
-    * Hospital Value-Based Purchasing (HVBP) - Efficiency Scores:https://data.cms.gov/provider-data/dataset/su9h-3pvj
-    * CMS Stars: https://data.cms.gov/provider-data/dataset/xubh-q36u
 ## Recommendation System Overview
 Our recommendations are based off of the cosine similarity measurement. Using the user inputs as our query vector, we 
 calculate the cosine similarity for all hospitals in the state selected by the user and return our top 5 as our 
 recommendation.
+## Recommendation System Evaluation and Metrics
+## Mapping Recommended Hospital Locations and Ease of Practical Use
+The streamlit app itself actually pulls double duty, it functions as a blog post as well as an interactive application 
+for users to get hospital recommendations. Once the app has been started, there are various sections that detail the 
+background of the project, evaluation metrics, etc. One of those sections is the section where users can enter their 
+inputs and receive recommendations.
 ## Future Directions
+The nice part about our model is that it can be readily adapted, dynamically. Future directions could include 
+increasing model parameters, enhancing evaluation metrics, and even adapting our model to user feedback and real-world 
+events.
+### Increasing Model Parameters
+Currently, our model accounts for 14/24 questions asked within the CMS HCAHPS survey. We could increase additional 
+model parameters to capture all survey responses and further isolate buckets of questions. For instance, there are a 
+number of patient ratings about receiving timely medication, which can become a standalone parameter. Other parameters 
+could include overall hospital, comprising patient ratings on hospital cleanliness, ambiance, and quietness.
+### Enhancing Evaluation Metrics
+### Adapting Model to Users and Events
+Our hospital recommendation engine can be modified for a range of events and users. For instance, the COVID-19 overlay 
+can be changed to another global pandemic’s data should it become prevalent. Furthermore, we can wrap our model in an 
+LSTM by capturing user feedback on the accuracy of our model and refining it in real-time accordingly. This would 
+likely require setting up AWS servers to retain data and run a cloud cluster for LSTM.
