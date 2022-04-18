@@ -1,4 +1,4 @@
-# Team Care: Hospital Recommendation System
+# Team Care: Hospital Recommendation Engine to Receive Optimal Care
 ## Overview
 Elective procedures in the US have been frequently canceled over the past 2 years since COVID began; just as things were returning to normal, hospitals are now facing capacity issues and canceling elective procedures. 
 However, disease has no regard for COVID and continues to adversely human health, untreated. 
@@ -30,11 +30,7 @@ streamlit run streamlit_app.py
 The streamlit app itself actually pulls double duty, it functions as a blog post as well as an interactive application 
 for users to get hospital recommendations. Once the app has been started, there are various sections that detail the 
 background of the project, evaluation metrics, etc. One of those sections is the section where users can enter their 
-inputs and receive recommendations. 
-## Recommendation System Overview
-Our recommendations are based off of the cosine similarity measurement. 
-Using the user inputs as our query vector, we calculate the cosine similarity for all hospitals in the data set and return our top 3 as our recommendation.
-Users also have the ability to specify how important each feature is to them and these weights are taken into account during the cosine similarity determination.
+inputs and receive recommendations.
 ## Application Data Overview
 There are a variety of data sources that are used as part of this application, some that are static and do not change 
 (these can be found in the app/data directory) and others that are gathered each time the application is started as 
@@ -93,3 +89,8 @@ Current data in data folder was acquired on February 23, 2022 by manually downlo
     * Patient survey (HCAHPS) - Hospital: https://data.cms.gov/provider-data/dataset/dgck-syfz
     * Hospital Value-Based Purchasing (HVBP) - Efficiency Scores:https://data.cms.gov/provider-data/dataset/su9h-3pvj
     * CMS Stars: https://data.cms.gov/provider-data/dataset/xubh-q36u
+## Recommendation System Overview
+Our recommendations are based off of the cosine similarity measurement. Using the user inputs as our query vector, we 
+calculate the cosine similarity for all hospitals in the state selected by the user and return our top 5 as our 
+recommendation.
+## Future Directions
