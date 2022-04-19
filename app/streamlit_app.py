@@ -1,5 +1,6 @@
 import os.path
 import folium
+import math
 import random
 import altair as alt
 import pandas as pd
@@ -116,6 +117,7 @@ def recommend_hospitals(hospitals, user, num_recommendations=5):
 
 
 def random_query_generator(state_abbreviations, n=100):
+    # function needs to be update with new notebook code from Ridima
     qs = [[random.choice(state_abbreviations),
            random.randint(70, 100),
            random.randint(50, 100),
@@ -124,6 +126,7 @@ def random_query_generator(state_abbreviations, n=100):
     df_queries = pd.DataFrame(qs,
                               columns=['selected_state', 'doctor_rating', 'nurses_rating', 'staff_rating', 'patient_rating'])
     return df_queries
+
 
 @st.cache(ttl=3*60*60, suppress_st_warning=True)
 def evaluation_pre_rec(queries, hospitals, n=-1):
@@ -178,6 +181,45 @@ def evaluation_mean_avg_pre(queries, hospitals, cutoff=-1):
         all_pres.append(sum(precisions) / len(hosp_rel))
     mean_avg_pre = sum(all_pres) / len(all_pres)
     return avg_pre, mean_avg_pre
+
+
+@st.cache(ttl=3*60*60, suppress_st_warning=True)
+def evaluation_ndcg(queries, hospitals, n=-1, base=2):
+    ndcg = []
+    for i in range(len(queries)):
+        query = queries.iloc[i].to_dict()
+        recommendations = recommend_hospitals(hospitals, query)
+        hosp_rel = hospitals[hospitals['state'] == query['selected_state']]
+        hosp_rel = hosp_rel.sort_values(by=['hospital_overall_rating'], ascending=False)
+        hosp_rel = hosp_rel[hosp_rel['hospital_overall_rating'] == hosp_rel['hospital_overall_rating'].values.max()]
+        j_doc_scores = list(range(len(hosp_rel) + 1, 1, -1))
+        if len(recommendations) > len(j_doc_scores):
+            j_doc_scores = j_doc_scores + ([1]*(len(recommendations) - len(j_doc_scores)))
+        retrived_scores = []
+        for doc in recommendations["facility_id"].tolist():
+            counter = 0
+            if doc in hosp_rel["facility_id"].tolist():
+                retrived_scores.append(j_doc_scores[hosp_rel["facility_id"].tolist().index(doc)])
+            else:
+                retrived_scores.append(1)
+            counter += 1
+        if (n != -1) and (n <= len(recommendations)):
+            retrived_scores = retrived_scores[:n]
+        j_doc_scores = j_doc_scores[:len(retrived_scores)]
+        rs_sum = 0
+        for j, val in enumerate(retrived_scores):
+            if j+1 < base:
+                rs_sum += val
+            else:
+                rs_sum += (val / math.log(j+1, base))
+        jd_sum = 0
+        for k, val in enumerate(j_doc_scores):
+            if k+1 < base:
+                jd_sum += val
+            else:
+                jd_sum += (val / math.log(k+1, base))
+        ndcg.append(rs_sum/jd_sum)
+    return ndcg
 
 
 st.set_page_config(
@@ -323,18 +365,29 @@ st.markdown(
     """)
 
 st.header("IV. Recommendation System Evaluation and Metrics")
+st.markdown(
+    """
+    Our recommendation system is a retrieval system based on ranking of hospitals calculated using their cosine 
+    similarity with respect to the user specified query. In order to test its effectiveness, we explored a few 
+    evaluation metrics that would be suitable for such a system, namely Precision, Recall, Mean Average Precision (MAP) 
+    and Normalized Discounted Cumulative Gain (nDCG).
+    
+    We have created a random query generator to simulate queries and used a set of 5000 such artificially generated 
+    queries for this evaluation. The relevance base that the recommendations are compared against is the CMS top rated 
+    hospitals that offer emergency services.
+    """)
 queries = random_query_generator(state_locations["State"], 5000)
 pre_at_n, rec_at_n = evaluation_pre_rec(queries, survey_ratings, 10)
 avg_pre, mean_avg_pre = evaluation_mean_avg_pre(queries, survey_ratings, 10)
+ndcg = evaluation_ndcg(queries, survey_ratings)
 st.markdown(
     """
     Mean Average Precision: {}
-    
-    NDCG: {}
-    """.format(mean_avg_pre, "TBD"))
+    """.format(mean_avg_pre))
 queries["Precision"] = pre_at_n
 queries["Recall"] = rec_at_n
 queries["Average Precision"] = avg_pre
+queries["nDCG"] = ndcg
 st.markdown(hide_table_row_index, unsafe_allow_html=True)
 st.table(queries.head(5))
 pre_hist = alt.Chart(queries).mark_bar().encode(
@@ -349,7 +402,27 @@ avg_pre_hist = alt.Chart(queries).mark_bar().encode(
     alt.X("Average Precision:Q", bin=True),
     y="count()",
 ).properties(title="Histogram of Average Precision for 5000 Test Queries")
-st.altair_chart((pre_hist | rec_hist | avg_pre_hist), use_container_width=True)
+scatter = alt.Chart(queries).mark_line().encode(
+    alt.X("Recall:Q"),
+    alt.Y("Precision:Q"),
+).properties(title="Precision-Recall Curve for 5000 Test Queries")
+ndcg_hist = alt.Chart(queries).mark_bar().encode(
+    alt.X("nDCG:Q", bin=True),
+    y="count()",
+).properties(title="Histogram nDCG for 5000 Test Queries")
+st.altair_chart((pre_hist | rec_hist) & (scatter | avg_pre_hist) & ndcg_hist, use_container_width=True)
+st.markdown(
+    """
+    Precision and Recall for more than half our test queries was less than 0.1 while the metrics for the other half of 
+    the batch were spread unevenly across the remainder of the range. Along similar lines, the MAP for ~70% of the test 
+    queries was 0.1 or lower. However, the nDCG results were spread more evenly across the range in comparison even 
+    though the majority score was less than 0.5, indicating that our system provided only about 50% of the best ranking 
+    possible.
+    
+    These results indicate that our hospital recommendations are not particularly in line with the hospitals ranked 
+    highest as per the CMS ratings. This could be due to additional survey parameters that we have taken into account 
+    as they might differ in comparison to the hospital overall rating being used as the base.
+    """)
 
 st.header("V. Mapping Recommended Hospital Locations and Ease of Practical Use")
 community_data = gather_covid_data()
@@ -405,7 +478,7 @@ if pressed:
             In this section you will find information on COVID-19 if you selected "Yes" to the question "Do you want to see COVID-19 data by county?"
             """)
         st.markdown(hide_table_row_index, unsafe_allow_html=True)
-        st.table(community_covid.drop("geometry", axis=1))
+        st.table(community_covid.drop("geometry", axis=1)[:5])
 st.header("VI. Future Directions")
 st.markdown(
     """
