@@ -116,13 +116,13 @@ def recommend_hospitals(hospitals, user, num_recommendations=5):
     return final
 
 
-def random_query_generator(state_abbreviations, n=100):
+def random_query_generator(hospitals, n=100):
     # function needs to be update with new notebook code from Ridima
-    qs = [[random.choice(state_abbreviations),
-           random.randint(70, 100),
-           random.randint(50, 100),
-           random.randint(0, 100),
-           random.randint(0, 100)] for i in range(n)]
+    qs = [[random.choice(hospitals["state"].unique()),
+           random.randint(int(hospitals["doctors"].min()), 100),
+           random.randint(int(hospitals["nurses"].min()), 100),
+           random.randint(int(hospitals["staffs"].min()), 100),
+           random.randint(int(hospitals["patients"].min()), 100)] for i in range(n)]
     df_queries = pd.DataFrame(qs,
                               columns=['selected_state', 'doctor_rating', 'nurses_rating', 'staff_rating', 'patient_rating'])
     return df_queries
@@ -231,8 +231,8 @@ st.header("Anurag Bolneni, Brian Minie, Ridima Bhatt")
 st.header("I. Introduction")
 st.markdown(
     """
-    U.S. healthcare is of the most convoluted sectors; transparency and ease of access remains scant. For our project, 
-    we assessed CMS data to help recommend hospitals for a patient, based on ratings they desire for different 
+    U.S. healthcare is one of the most convoluted sectors; transparency and ease of access remains scant. For our 
+    project, we assessed CMS data to help recommend hospitals for a patient, based on ratings they desire for different 
     parameters (e.g. doctor, nurses). Furthermore, we’ve included COVID-19 prevalence in different regions to add 
     additional layers of choice for a patient; they can actively avoid hospitals in areas of COVID-19 if that’s a major 
     concern. 
@@ -273,8 +273,8 @@ st.markdown(
     that we use for plotting the data via Folium. 
     
     In this app, all data is cached once it has been loaded. By caching the data instead of access the files any time 
-    new recommendations are requests we can quickly make new recommendations in 1-2 seconds instead of having to reload 
-    and process all the required data which would take approximately 1-2 minute.
+    new recommendations are requested we can quickly make and present new recommendations in 1-2 seconds instead of 
+    having to reload and process all the required data which would take approximately 1-2 minute.
     ### Static Data Sets
     * statelatlong.csv
         * United States latitude and longitude coordinates that will be used as default state locations when plotting recommended hospital locations when no COVID-19 data is to be plotted. Originally downloaded from https://www.kaggle.com/datasets/washimahmed/usa-latlong-for-state-abbreviations
@@ -284,9 +284,13 @@ st.markdown(
     * CMS datasets
         * Hospital General Information
             * List of all Medicare listed hospitals with geographic and overall hospital metrics
+            * Accessed via CMS's provided API: https://data.cms.gov/provider-data/api/1/datastore/query/xubh-q36u/0/download?format=csv
         * Patient Survey (HCAHPS)
             * List of all hospital ratings per patient survey regarding their recent inpatient hospital stay
+            * Accessed via CMS's provided API: https://data.cms.gov/provider-data/api/1/datastore/query/dgck-syfz/0/download?format=csv
     * COVID-19 dataset
+        * U.S county-level COVID-19 data for the past 7 days. 
+        * Accessed via the HHS Public Protect Hub API: https://protect-public.hhs.gov/datasets/cad5b70395a04b95936f0286be30e282/api
     """)
 state_locations = load_state_locations()
 hospital_gdf = load_hospital_locations()
@@ -353,15 +357,16 @@ st.markdown(
     """
     Our hospital recommendation engine first begins by asking the user to enter their recommendation preferences. We 
     ask for user to specify their state and their ideal ratings for doctors, nurses, staff, and patients to discern the 
-    types of hospitals a user would like. We collect these preferences to a dictionary and use to generate 
-    recommendations of optimal hospitals.
+    types of hospitals a user would like. We collect these preferences as our query vector and use them to generate 
+    hospital recommendations.
     
     Our hospital recommendation engine has a two-step process: filter the hospital data based on the user's selected 
-    state and conduct cosine similarity for the user's ideal ratings for doctors, nurses, staff, and patients against 
-    all filtered hospitals to return those hospitals that are most similar (i.e. highest cosine similarity) with the 
-    user's preferences. The hospital recommendations are collected and presented to the user along with a map of their 
-    locations. An interactive example is provided in section V. Mapping Recommended Hospital Locations and Ease of 
-    Practical Use.
+    state and calculate cosine similarity using the user's ideal ratings for doctors, nurses, staff, and patients and 
+    the same measurements forall filtered hospitals to return those hospitals that are most similar (i.e. highest 
+    cosine similarity) with the user's preferences. The hospital recommendations (i.e. those with the 5 highest cosine 
+    similarity) are collected and presented to the user along with a map of their locations as well as county-level 
+    COVID-19 data for the user selected state if the user requests it. An interactive example is provided in section V. 
+    Mapping Recommended Hospital Locations and Ease of Practical Use.
     """)
 
 st.header("IV. Recommendation System Evaluation and Metrics")
@@ -376,7 +381,7 @@ st.markdown(
     queries for this evaluation. The relevance base that the recommendations are compared against is the CMS top rated 
     hospitals that offer emergency services.
     """)
-queries = random_query_generator(state_locations["State"], 5000)
+queries = random_query_generator(survey_ratings, 5000)
 pre_at_n, rec_at_n = evaluation_pre_rec(queries, survey_ratings, 10)
 avg_pre, mean_avg_pre = evaluation_mean_avg_pre(queries, survey_ratings, 10)
 ndcg = evaluation_ndcg(queries, survey_ratings)
@@ -454,8 +459,11 @@ if pressed:
                                        "staff_rating": staff_rating})
 
     st.subheader("Map of Recommended Hospitals")
-    st.text('In this section you will find an interactive map showing the recommended hospital locations\n'
-            'COVID-19 data will be deployed depending on your answer to "Do you want to see COVID-19 data by county?"')
+    st.markdown(
+        """
+        In this section you will find an interactive map showing the recommended hospital locations COVID-19 data will 
+        be deployed depending on your answer to "Do you want to see COVID-19 data by county?"
+        """)
     m = folium.Map()
     if display_covid == "Yes":
         m = community_covid.explore(column="Cases_last_7_days", legend=True)
@@ -475,10 +483,13 @@ if pressed:
         st.subheader("COVID-19 Information By County")
         st.markdown(
             """
-            In this section you will find information on COVID-19 if you selected "Yes" to the question "Do you want to see COVID-19 data by county?"
+            In this section you will find information on COVID-19 if you selected "Yes" to the question "Do you want to 
+            see COVID-19 data by county?" We are only displaying the first 5 counties in the state so you can get a 
+            sense as to what the data looks like.
             """)
         st.markdown(hide_table_row_index, unsafe_allow_html=True)
         st.table(community_covid.drop("geometry", axis=1)[:5])
+
 st.header("VI. Future Directions")
 st.markdown(
     """
@@ -494,9 +505,21 @@ st.markdown(
     a number of patient ratings about receiving timely medication, which can become a standalone parameter. Other 
     parameters could include overall hospital, comprising patient ratings on hospital cleanliness, ambiance, and 
     quietness.
+    
+    Our current model does not take into account user location which could result in the recommended hospital being a 
+    long distance from the users location (ex. user lives in northern California but based on their specified 
+    parameters the top recommended hospital is in southern California). By capturing the users location we could add the 
+    commute distance to the different hospitals as a new model parameter to improve our recommendations.
     """)
 st.subheader("Enhancing Evaluation Metrics")
-st.markdown("""""")
+st.markdown(
+    """
+    The current evaluation metrics are calculated against the CMS overall hospital rating. Additionally, the model 
+    could be evaluated against top hospitals by distance. Zip codes are also available in the general information 
+    dataset so they could be used as an additional parameter to incorporate distance into our system and enhance the 
+    quality of recommendations generated. The HCAHPS sub-parameters that we have incorporated into the model could also 
+    be normalized to obtain more accurate and realistic results.
+    """)
 st.subheader("Adapting Model to Users and Events")
 st.markdown(
     """
@@ -504,4 +527,24 @@ st.markdown(
     overlay can be changed to another global pandemic’s data should it become prevalent. Furthermore, we can wrap our 
     model in an LSTM by capturing user feedback on the accuracy of our model and refining it in real-time accordingly. 
     This would likely require setting up AWS servers to retain data and run a cloud cluster for LSTM.
+    """)
+
+st.header("VII: Statement of Work")
+st.markdown(
+    """
+    Anurag originally came up with the idea for this project and acted as the subject matter expert. He also identified 
+    the CMS data sets to use as well as generating the recommender system MVP which included data cleaning, merging, 
+    and exploration. Anurag also provided feedback on the streamlit app design and acted as the overall project lead.
+    
+    Brian focused on streamlining data processing, cleaning, and merging as well as implementing usage of public API's 
+    to pull down data and converting the recommender system MVP into the final recommender system deployed as part of 
+    this post/app. Brian also designed the Streamlit app, handled visualizations and hospital location mappings, 
+    integrated retrieval and plotting of COVID-19 data, and managed the GitHub repo and conda environment used as part 
+    of this project. 
+    
+    Brian and Ridima implemented the recommender system evaluation metrics. Ridima also worked on data cleaning and 
+    exploration as well as designing the random query generator used as part of the recommender system evaluation. 
+    Ridima also provided feedback on the streamlit app design.
+    
+    All team members contributed equally to writing the final report/blog post.
     """)
