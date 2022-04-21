@@ -53,11 +53,12 @@ process all the required data which would take approximately 1-2 minute.
 ### Static Data Sets
 * statelatlong.csv
   * United States latitude and longitude coordinates that will be used as default state locations when plotting 
-recommended hospital locations when no COVID-19 data is to be plotted. Originally downloaded from 
+recommended hospital locations when no COVID-19 data is to be plotted. 
+  * Originally downloaded from 
 https://www.kaggle.com/datasets/washimahmed/usa-latlong-for-state-abbreviations
 * us_hospital_locations.csv
-  * Information about 7596 hospitals in the United States including latitude, longitude, staff, beds, ownership, etc. 
-All records were originally extracted from the U.S. Department of Homeland Security with the complete dataset downloaded
+  * Information about 7596 hospitals in the United States including latitude, longitude, staff, beds, ownership, etc.
+  * All records were originally extracted from the U.S. Department of Homeland Security with the complete dataset downloaded
 from https://www.kaggle.com/datasets/andrewmvd/us-hospital-locations  
 ### Dynamic Data Sets
 * Hospital General Information
