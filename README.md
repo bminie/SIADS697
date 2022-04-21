@@ -104,7 +104,15 @@ as they might differ in comparison to the hospital overall rating being used as 
 The streamlit app itself actually pulls double duty, it functions as a blog post as well as an interactive application 
 for users to get hospital recommendations. Once the app has been started, there are various sections that detail the 
 background of the project, evaluation metrics, etc. One of those sections is the section where users can enter their 
-inputs and receive recommendations.
+inputs and receive recommendations. The user will select their state from a dropdown menu and then entire their ideal 
+rating for doctors, nurses, staff, and what other patients have rated the hospital on a scale of 1-100. Then users will 
+hit the Generate Recommendations button and their recommendations will be made and displayed to the user. This includes 
+information about the recommended hospitals as well as a map of the hospital locations. There is an additional option 
+that the user can use to specify if they want COVID-19 data overlayed on the map. Depending on the selection, the map 
+may contain the county-level COVID-19 data for the past 7 days along with an example of the information that is 
+available for each county. The map is built using Folium and uses the streamlit-folium extension to display is properly 
+to the user. The map is interactive as well so users can zoom in/out as well as use the tooltips to see additional 
+information about the hospitals and COVID-19 data per county.
 ## Future Directions
 The nice part about our model is that it can be readily adapted, dynamically. Future directions could include 
 increasing model parameters, enhancing evaluation metrics, and even adapting our model to user feedback and real-world 
