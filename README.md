@@ -1,17 +1,25 @@
 # Team Care: Hospital Recommendation Engine to Receive Optimal Care
 ## Overview
-Elective procedures in the US have been frequently canceled over the past 2 years since COVID began; just as things were returning to normal, hospitals are now facing capacity issues and canceling elective procedures. 
-However, disease has no regard for COVID and continues to adversely human health, untreated. 
-Receiving healthcare is already an overly opaque and complex process - recent events have only made things more difficult. 
-We've created an open-source, web-based tool to help people navigate which US hospitals to get treatment at for elective procedures based on value-based care measures and convenience. 
-Our recommendation engine takes user input (e.g. type of procedure needed, location, etc), along with weighted user priorities for model features (e.g. cost of care, quality of care, etc), to provide a “top 3 hospitals” to attain care with regard to COVID-19 (or future disease) prevalence in various geographies.
-
-To build the web-based tool we are using the Streamlit python library as it enables rapid prototyping while producing production-quality dashboards. User will easily be able to enter parameters into the web app and visualize the results via tables and maps.
+U.S. healthcare is one of the most convoluted sectors; transparency and ease of access remains scant. For our 
+project, we assessed CMS data to help recommend hospitals for a patient, based on ratings they desire for different 
+parameters (e.g. doctor, nurses). Furthermore, we’ve included COVID-19 prevalence in different regions to add 
+additional layers of choice for a patient; they can actively avoid hospitals in areas of COVID-19 if that’s a major 
+concern. 
+    
+Our analysis has five key components:
+* Data Exploration
+* Hospital Recommendation Engine
+* Evaluation Metrics
+* Visualization and Ease of Practical Use
+* Future Directions
+    
+We hope our hospital recommendation engine helps increase visibility into the U.S. hospital system for patients, 
+helping patients make more informed decisions about their healthcare.
 ## Getting Started
 ### Create Virtual Environment
 It's highly recommended that you use a virtual environment when working with the app with conda being recommended.
 
-Using either the requirements.txt or environemnt.yml file, create a virtual environment using conda
+Using either the requirements.txt or environment.yml file, create a virtual environment using conda
 ```commandline
 conda env create -f environment.yml
 conda create --name <env_name> --file requirements.txt
