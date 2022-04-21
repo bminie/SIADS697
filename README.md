@@ -59,7 +59,7 @@ https://www.kaggle.com/datasets/washimahmed/usa-latlong-for-state-abbreviations
 * us_hospital_locations.csv
   * Information about 7596 hospitals in the United States including latitude, longitude, staff, beds, ownership, etc.
   * All records were originally extracted from the U.S. Department of Homeland Security with the complete dataset downloaded
-from https://www.kaggle.com/datasets/andrewmvd/us-hospital-locations  
+from https://www.kaggle.com/datasets/andrewmvd/us-hospital-locations
 ### Dynamic Data Sets
 * Hospital General Information
   * List of all Medicare listed hospitals with geographic and overall hospital metrics
@@ -70,6 +70,35 @@ from https://www.kaggle.com/datasets/andrewmvd/us-hospital-locations
 * COVID-19 dataset
   * U.S county-level COVID-19 data for the past 7 days. 
   * Accessed via the HHS Public Protect Hub API: https://protect-public.hhs.gov/datasets/cad5b70395a04b95936f0286be30e282/api
+#### Hospital General Information
+The CMS Hospital General Information has a number of fields from CMS including addresses, phone numbers, hospital type, 
+and overall hospital rating. We processed this dataframe to eliminate extraneous fields and kept geographic, contact, 
+and overall hospital information (e.g. rating, emergency services). This helped us retain a dataframe with only the 
+necessary fields of information.
+#### Patient Survey (HCAHPS)
+The CMS HCAHPS patient survey data is a national, standardized survey of hospital patients attaining ratings about 
+their recent inpatient hospital stay experiences. Each hospital facility ID has 24 distinct measures tracking patient 
+experience. The patient experiences questions can be broken down into twelve different categories of ratings per 
+Facility ID and obtain metrics on patients. Examples of these measures can be seen below:
+
+We then looked through each of the Measures, which contain sub-questions. For our hospital recommendation model, we 
+were interested in Composite 1, 2, 3, and 5. In total, this amounts to four patient-centric model parameters, which 
+consist of 14 sub-parameters. The full list of parameters we used can be found below.
+
+For each hospital, we took the mean of sub parameters to determine an overall score for each parameter. These four 
+measures then became hospital parameters for our recommendation engine to score against patient inputs.
+### Combining Data Sets
+After cleaning the hospital general information and patient survey data, we joined the two datasets on Facility ID. 
+This enabled us to centralize all of our model parameters and necessary hospital information within a single dataframe. 
+
+When we began cleaning the data we realized that duplicate addresses exist but each Facility ID is unique; in total, 
+this amounted to 5306 unique hospital Facility IDs. Upon further evaluation of the hospital type, we 
+recognized that many of the duplicate addresses have psychiatry or non-invasive specialties that would not be 
+appropriate for evaluation anyway given we’re focused on in-patient hospital care. Given this information, we 
+combined the datasets and dropped rows with NA values.
+    
+We initially also considered using data on all US hospitals from the American Hospital Directory (AHD), but upon 
+cleaning realized there were too many discrepancies between AHD and CMS.
 ## Hospital Recommendation Engine
 Our hospital recommendation engine first begins by asking the user to enter their recommendation preferences. We 
 ask for user to specify their state and their ideal ratings for doctors, nurses, staff, and patients to discern the 
@@ -78,7 +107,7 @@ hospital recommendations.
     
 Our hospital recommendation engine has a two-step process: filter the hospital data based on the user's selected 
 state and calculate cosine similarity using the user's ideal ratings for doctors, nurses, staff, and patients and 
-the same measurements forall filtered hospitals to return those hospitals that are most similar (i.e. highest 
+the same measurements for all filtered hospitals to return those hospitals that are most similar (i.e. highest 
 cosine similarity) with the user's preferences. The hospital recommendations (i.e. those with the 5 highest cosine 
 similarity) are collected and presented to the user along with a map of their locations as well as county-level 
 COVID-19 data for the user selected state if the user requests it.
@@ -107,13 +136,14 @@ for users to get hospital recommendations. Once the app has been started, there 
 background of the project, evaluation metrics, etc. One of those sections is the section where users can enter their 
 inputs and receive recommendations. The user will select their state from a dropdown menu and then entire their ideal 
 rating for doctors, nurses, staff, and what other patients have rated the hospital on a scale of 1-100. Then users will 
-hit the Generate Recommendations button and their recommendations will be made and displayed to the user. This includes 
+hit the "Generate Recommendations" button and their recommendations will be made and displayed to the user. This includes 
 information about the recommended hospitals as well as a map of the hospital locations. There is an additional option 
-that the user can use to specify if they want COVID-19 data overlayed on the map. Depending on the selection, the map 
+that the user can use to specify if they want COVID-19 data overlaid on the map. Depending on the selection, the map 
 may contain the county-level COVID-19 data for the past 7 days along with an example of the information that is 
 available for each county. The map is built using Folium and uses the streamlit-folium extension to display is properly 
 to the user. The map is interactive as well so users can zoom in/out as well as use the tooltips to see additional 
-information about the hospitals and COVID-19 data per county.
+information about the hospitals and COVID-19 data per county. Users can change inputs and regenerated new 
+recommendations at any time just by changing their inputs in the form and hitting "Generate Recommendations" again.
 ## Future Directions
 The nice part about our model is that it can be readily adapted, dynamically. Future directions could include 
 increasing model parameters, enhancing evaluation metrics, and even adapting our model to user feedback and real-world 
