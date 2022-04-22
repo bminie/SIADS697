@@ -152,6 +152,8 @@ available for each county. The map is built using Folium and uses the streamlit-
 to the user. The map is interactive as well so users can zoom in/out as well as use the tooltips to see additional 
 information about the hospitals and COVID-19 data per county. Users can change inputs and regenerated new 
 recommendations at any time just by changing their inputs in the form and hitting "Generate Recommendations" again.
+
+https://user-images.githubusercontent.com/38255038/164472751-e6a8bbb5-1e13-406c-b2a7-4d46a217ac8e.mov
 ## Future Directions
 The nice part about our model is that it can be readily adapted, dynamically. Future directions could include 
 increasing model parameters, enhancing evaluation metrics, and even adapting our model to user feedback and real-world 
