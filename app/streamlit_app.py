@@ -328,6 +328,7 @@ def main():
         """)
     st.markdown(hide_table_row_index, unsafe_allow_html=True)
     st.table(hospital_ratings.head())
+    st.caption("Example of hospital general information dataframe")
     st.markdown(
         """
         #### Patient Survey (HCAHPS)
@@ -348,6 +349,7 @@ def main():
                                 "Doctors": ["H_COMP_2_A_P", "H_DOCTOR_RESPECT_A_P", "H_DOCTOR_LISTEN_A_P", "H_DCOTOR_EXPLAIN_A_P"],
                                 "Patients": ["H_COMP_3_A_P", "H_CALL_BUTTON_A_P", "H_BATH_HELP_A_P", ""],
                                 "Staffs": ["H_COMP_5_A_P", "H_MED_FOR_A_P", "H_SIDE_EFFECTS_A_P", ""]}))
+    st.caption("Measures used to assess doctors, nurses, patients, and staff ratings for each hospital")
     st.markdown(
         """
         For each hospital, we took the mean of sub parameters to determine an overall score for each parameter. These four 
@@ -355,6 +357,7 @@ def main():
         """)
     st.markdown(hide_table_row_index, unsafe_allow_html=True)
     st.table(hospital_survey.head())
+    st.caption("Example of hospital survey dataframe")
     st.markdown(
         """
         ### Combining Data Sets
@@ -405,12 +408,13 @@ def main():
     avg_pre, mean_avg_precision = evaluation_mean_avg_pre(queries, survey_ratings, 10)
     ndcg = evaluation_ndcg(queries, survey_ratings)
     queries_metrics = add_metrics_to_queries(queries, pre_at_n, rec_at_n, avg_pre, ndcg)
+    st.markdown(hide_table_row_index, unsafe_allow_html=True)
+    st.table(queries_metrics.head(5))
+    st.caption("Example of collected performance metrics for test queries")
     st.markdown(
         """
         Mean Average Precision: {}
         """.format(mean_avg_precision))
-    st.markdown(hide_table_row_index, unsafe_allow_html=True)
-    st.table(queries_metrics.head(5))
     pre_hist = alt.Chart(queries_metrics).mark_bar().encode(
         alt.X("Precision:Q", bin=True),
         y="count()",
@@ -432,6 +436,7 @@ def main():
         y="count()",
     ).properties(title="Histogram nDCG for 5000 Test Queries")
     st.altair_chart((pre_hist | rec_hist) & (scatter | avg_pre_hist) & ndcg_hist, use_container_width=True)
+    st.caption("Compiled performance metrics for test queries")
     st.markdown(
         """
         Precision and Recall for more than half our test queries was less than 0.1 while the metrics for the other half of 
@@ -509,11 +514,13 @@ def main():
             recommended.apply(lambda row: folium.Marker(location=[row["LATITUDE"], row["LONGITUDE"]],
                                                         tooltip=row["NAME"]).add_to(m), axis=1)
         folium_static(m)
+        st.caption("Map of recommended hospitals with/without COVID-19 data overlay")
 
         st.subheader("Information on Recommended Hospitals")
         st.markdown(hide_table_row_index, unsafe_allow_html=True)
         st.table(recommended[["NAME", "ADDRESS", "CITY", "STATE", "TELEPHONE", "WEBSITE", "hospital_overall_rating",
                               "Cosine Similarity"]])
+        st.caption("Information of recommended hospitals")
 
         if display_covid == "Yes":
             st.subheader("COVID-19 Information By County")
@@ -525,6 +532,7 @@ def main():
                 """)
             st.markdown(hide_table_row_index, unsafe_allow_html=True)
             st.table(community_covid.drop("geometry", axis=1)[:5])
+            st.caption("Example of COVID-19 data by county in selected state")
 
     st.header("VI. Future Directions")
     st.markdown(
