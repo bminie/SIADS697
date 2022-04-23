@@ -96,7 +96,8 @@ necessary fields of information.
 The CMS HCAHPS patient survey data is a national, standardized survey of hospital patients attaining ratings about 
 their recent inpatient hospital stay experiences. Each hospital facility ID has 24 distinct measures tracking patient 
 experience. The patient experiences questions can be broken down into twelve different categories of ratings per 
-Facility ID and obtain metrics on patients. Examples of these measures can be seen below:
+Facility ID and obtain metrics on patients. The data dictionary describing the survey fields can be found at 
+https://data.cms.gov/provider-data/sites/default/files/data_dictionaries/hospital/HospitalCompare-DataDictionary.pdf
 
 We then looked through each of the Measures, which contain sub-questions. For our hospital recommendation model, we 
 were interested in Composite 1, 2, 3, and 5. In total, this amounts to four patient-centric model parameters, which 
@@ -167,6 +168,14 @@ https://user-images.githubusercontent.com/38255038/164472751-e6a8bbb5-1e13-406c-
 The nice part about our model is that it can be readily adapted, dynamically. Future directions could include 
 increasing model parameters, enhancing evaluation metrics, and even adapting our model to user feedback and real-world 
 events.
+### Application Performance Enhancements
+Currently, in the app we are loading and calculating performance metrics for 5000 test queries to assess our information 
+retrieval and recommendation system. While this is done only upon app start-up it can take a few minutes to complete. 
+The main reason for this is that the performance metrics are calculated in a serial fashion based on the same 5000 test 
+queries. One way to improve this is to calculate these performance metrics in parallel which will significantly cut 
+down on the initial app start-up time. This can be done in a variety of ways, from using Python's built-in parallel 
+processing features likes Process and Queue to creating a pipeline that can be run as part of the app and generates the 
+performance metrics. 
 ### Increasing Model Parameters
 Currently, our model accounts for 14/24 questions asked within the CMS HCAHPS survey. We could increase additional 
 model parameters to capture all survey responses and further isolate buckets of questions. For instance, there are 
@@ -175,7 +184,7 @@ parameters could include overall hospital, comprising patient ratings on hospita
 quietness.
     
 Our current model does not take into account user location which could result in the recommended hospital being a 
-long distance from the users location (ex. user lives in northern California but based on their specified 
+long distance from the user's location (ex. user lives in northern California but based on their specified 
 parameters the top recommended hospital is in southern California). By capturing the users location we could add the 
 commute distance to the different hospitals as a new model parameter to improve our recommendations.
 ### Enhancing Evaluation Metrics
