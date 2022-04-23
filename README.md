@@ -19,7 +19,7 @@ helping patients make more informed decisions about their healthcare.
 ### Accessing the Pre-Built Streamlit App
 This application has been built with Streamlit and is hosted on Streamlit Cloud. If you'd like to access the app, click 
 the badge below and you will be taken to the app. This is provided as an alternative to running the app locally and 
-makes it available to the wider community and those with the expertise to get the app running on their local machine.
+makes it available to the wider community and those without the expertise to get the app running on their local machine.
 
 [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://share.streamlit.io/bminie/siads697/main/app/streamlit_app.py)
 ### Create Virtual Environment
