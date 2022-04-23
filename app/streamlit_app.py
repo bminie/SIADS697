@@ -23,7 +23,7 @@ hide_table_row_index = """
 
 @st.cache(ttl=3*60*60, suppress_st_warning=True)
 def load_state_locations():
-    file_path = os.path.join(os.getcwd(), "data", "statelatlong.csv")
+    file_path = os.path.join(os.getcwd(), "app", "data", "statelatlong.csv")
     state_coordinates = pd.read_csv(file_path)
     df = gpd.GeoDataFrame(state_coordinates, geometry=gpd.points_from_xy(state_coordinates.Longitude, state_coordinates.Latitude))
     df.dropna(inplace=True)
@@ -32,7 +32,7 @@ def load_state_locations():
 
 @st.cache(ttl=3*60*60, suppress_st_warning=True)
 def load_hospital_locations():
-    file_path = os.path.join(os.getcwd(), "data", "us_hospital_locations.csv")
+    file_path = os.path.join(os.getcwd(), "app", "data", "us_hospital_locations.csv")
     hospital_coordinates = pd.read_csv(file_path)
     df = gpd.GeoDataFrame(hospital_coordinates, geometry=gpd.points_from_xy(hospital_coordinates.LONGITUDE, hospital_coordinates.LATITUDE))
     df.dropna(inplace=True)
