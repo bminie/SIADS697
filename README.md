@@ -94,7 +94,7 @@ and overall hospital information (e.g. rating, emergency services). This helped 
 necessary fields of information.
 #### Patient Survey (HCAHPS)
 The CMS HCAHPS patient survey data is a national, standardized survey of hospital patients attaining ratings about 
-their recent inpatient hospital stay experiences. Each hospital facility ID has 24 distinct measures tracking patient 
+their recent inpatient hospital stay experiences. Each hospital facility ID has 22 distinct measures tracking patient 
 experience. The patient experiences questions can be broken down into twelve different categories of ratings per 
 Facility ID and obtain metrics on patients. The data dictionary describing the survey fields can be found at 
 https://data.cms.gov/provider-data/sites/default/files/data_dictionaries/hospital/HospitalCompare-DataDictionary.pdf
@@ -177,7 +177,7 @@ down on the initial app start-up time. This can be done in a variety of ways, fr
 processing features likes Process and Queue to creating a pipeline that can be run as part of the app and generates the 
 performance metrics. 
 ### Increasing Model Parameters
-Currently, our model accounts for 14/24 questions asked within the CMS HCAHPS survey. We could increase additional 
+Currently, our model accounts for 14/22 questions asked within the CMS HCAHPS survey. We could increase additional 
 model parameters to capture all survey responses and further isolate buckets of questions. For instance, there are 
 a number of patient ratings about receiving timely medication, which can become a standalone parameter. Other 
 parameters could include overall hospital, comprising patient ratings on hospital cleanliness, ambiance, and 
