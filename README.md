@@ -21,8 +21,8 @@ It's highly recommended that you use a virtual environment when working with the
 
 Using either the requirements.txt or environment.yml file, create a virtual environment using conda
 ```commandline
-conda env create -f environment.yml
-conda create --name <env_name> --file requirements.txt
+conda env create -f environment.yml python=3.9
+conda create --name <env_name> --file requirements.txt python=3.9
 ```
 ### Starting the Streamlit App
 Ensure that you are in the app directory and run the following command to start the streamlit app.
@@ -32,6 +32,7 @@ The first command to activate the virtual environment is what will be used if yo
 The command may different slightly depending on your OS and conda version. Update the command appropriately for your OS and conda version.
 ```commandline
 conda activate team_care
+cd app
 streamlit run streamlit_app.py
 ```
 ## Application Data Overview
