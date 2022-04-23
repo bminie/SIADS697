@@ -139,11 +139,12 @@ We have created a random query generator to simulate queries and used a set of 5
 queries for this evaluation. The relevance base that the recommendations are compared against is the CMS top rated 
 hospitals that offer emergency services.
 
-Precision and Recall for more than half our test queries was less than 0.1 while the metrics for the other half of 
-the batch were spread unevenly across the remainder of the range. Along similar lines, the MAP for ~70% of the test 
-queries was 0.1 or lower. However, the nDCG results were spread more evenly across the range in comparison even 
-though the majority score was less than 0.5, indicating that our system provided only about 50% of the best ranking 
-possible.
+Precision and Recall for majority of our test queries was less than 0.1 while the metrics for the other half of 
+the batch were spread unevenly across the remainder of the range. Along similar lines, the Average Precision 
+for ~60% of the test queries was 0.1 or lower, resulting in a Mean Average Precision of only 0.16 for our 
+system. The nDCG results, however, were spread more evenly across the range in comparison even though the 
+majority score was 0.5 or less, indicating that our system provided only about 50% of the best ranking possible 
+on an average.
     
 These results indicate that our hospital recommendations are not particularly in line with the hospitals ranked 
 highest as per the CMS ratings. This could be due to additional survey parameters that we have taken into account 
