@@ -517,7 +517,10 @@ def main():
             m = folium.Map(location=[state_location["Latitude"], state_location["Longitude"]], zoom_start=6)
         if len(recommended) != 0:
             recommended.apply(lambda row: folium.Marker(location=[row["LATITUDE"], row["LONGITUDE"]],
-                                                        tooltip=row["NAME", "ADDRESS", "CITY", "STATE"]).add_to(m), axis=1)
+                                                        tooltip="<b>{}</b><br><b>{}</b><br><b>{}</b><br><b>{}</b><br>".format(row["NAME"],
+                                                                                                                              row["ADDRESS"],
+                                                                                                                              row["CITY"],
+                                                                                                                              row["STATE"])).add_to(m), axis=1)
         folium_static(m)
         st.caption("Map of recommended hospitals with/without COVID-19 data overlay")
 
