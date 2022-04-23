@@ -15,6 +15,8 @@ Our analysis has five key components:
     
 We hope our hospital recommendation engine helps increase visibility into the U.S. hospital system for patients, 
 helping patients make more informed decisions about their healthcare.
+
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://share.streamlit.io/bminie/siads697/main/app/streamlit_app.py)
 ## Getting Started
 ### Create Virtual Environment
 It's highly recommended that you use a virtual environment when working with the app with conda being recommended.
