@@ -12,7 +12,7 @@ from gatherData import *
 pd.set_option('mode.chained_assignment', None)
 random.seed(42)
 
-# CSS to inject contained in a string
+# CSS to inject that hides row index when displaying Pandas dataframe in Streamlit app
 hide_table_row_index = """
             <style>
             tbody th {display:none}
@@ -23,6 +23,12 @@ hide_table_row_index = """
 
 @st.cache(ttl=3*60*60, suppress_st_warning=True)
 def load_state_locations():
+    """
+    Load the statelatlong.csv file as a GeoPandas dataframe
+
+    Returns:
+        Contents of statelatlong.csv as a GeoPandas dataframe
+    """
     file_path = os.path.join(os.getcwd(), "app", "data", "statelatlong.csv")
     state_coordinates = pd.read_csv(file_path)
     df = gpd.GeoDataFrame(state_coordinates, geometry=gpd.points_from_xy(state_coordinates.Longitude, state_coordinates.Latitude))
@@ -32,6 +38,12 @@ def load_state_locations():
 
 @st.cache(ttl=3*60*60, suppress_st_warning=True)
 def load_hospital_locations():
+    """
+    Load the us_hospital_locations.csv file as Pandas dataframe
+
+    Returns:
+        Contents of us_hospital_locations.csv as a Pandas dataframe
+    """
     file_path = os.path.join(os.getcwd(), "app", "data", "us_hospital_locations.csv")
     hospital_coordinates = pd.read_csv(file_path)
     df = gpd.GeoDataFrame(hospital_coordinates, geometry=gpd.points_from_xy(hospital_coordinates.LONGITUDE, hospital_coordinates.LATITUDE))
@@ -41,6 +53,13 @@ def load_hospital_locations():
 
 @st.cache(ttl=3*60*60, suppress_st_warning=True)
 def load_hospital_ratings():
+    """
+    Load CMS hospital ratings data setusing the CMS API, filtering the data to only keep hospitals with available
+    ratings and emergency services
+
+    Returns:
+        Data retrieved from the CMS API for hospital ratings as a Pandas dataframe
+    """
     df = query_cms_api("https://data.cms.gov/provider-data/api/1/datastore/query/xubh-q36u/0/download?format=csv")
     df = df.iloc[:, :13].drop(columns=['phone_number', 'meets_criteria_for_promoting_interoperability_of_ehrs'])
     df = df[df["hospital_overall_rating"] != "Not Available"]
@@ -51,6 +70,13 @@ def load_hospital_ratings():
 
 @st.cache(ttl=3*60*60, suppress_st_warning=True)
 def load_hospital_survey():
+    """
+    Load CMS hospital survey data set using the CMS API. Calculates positive response rate for given set of questions
+    binned by type (doctors, nurses, patients, staff)
+
+    Returns:
+        Data retrieve and processed from CMS API for hospital survey as a Pandas dataframe
+    """
     question_type_dict = {'H_COMP_1_A_P': "nurses",
                           'H_NURSE_RESPECT_A_P': "nurses",
                           'H_NURSE_LISTEN_A_P': "nurses",
@@ -84,6 +110,16 @@ def load_hospital_survey():
 
 @st.cache(ttl=3*60*60, suppress_st_warning=True, allow_output_mutation=True)
 def merge_hospital_rating_survey(ratings, survey):
+    """
+    Merge hospital rating and survey dataframes using facility_id as the key to a single dataframe
+
+    Parameters:
+        ratings: hospital ratings Pandas dataframe
+        survey: hospital survey Pandas dataframe
+
+    Returns:
+        Pandas dataframe
+    """
     merged = ratings.merge(survey, on="facility_id").dropna().reset_index()
     merged = merged.drop(labels=['index', 'hospital_type', 'hospital_ownership'], axis=1)
     return merged
@@ -91,12 +127,28 @@ def merge_hospital_rating_survey(ratings, survey):
 
 @st.cache(ttl=3*60*60, suppress_st_warning=True, allow_output_mutation=True)
 def merge_hospital_location_ratings(locations, ratings):
+    """
+    Merge hospital rating and locations dataframes using facility name and state as key to a single dataframe
+
+    Parameters:
+        locations: hospital locations Pandas dataframe
+        ratings: hospital ratings Pandas dataframe
+
+    Returns:
+        Pandas dataframe
+    """
     merged = locations.merge(ratings, left_on=["NAME", "STATE"], right_on=["facility_name", "state"])
     return merged
 
 
 @st.cache(ttl=3*60*60, suppress_st_warning=True)
 def gather_covid_data():
+    """
+    Gather U.S county-level COVID-19 data using the Arcgis web API to pull down the data
+
+    Returns:
+        COVID-19 data in a GeoPandas dataframe
+    """
     url = 'https://services5.arcgis.com/qWZ7BaZXaP5isnfT/arcgis/rest/services/Community_Profile_Report_Counties/FeatureServer/0/'
     gdf = query_arcgis_feature_server(url)
     gdf = gdf[~gdf.County.str.startswith("Unallocated")]
@@ -105,6 +157,16 @@ def gather_covid_data():
 
 @st.cache(ttl=3*60*60, suppress_st_warning=True)
 def random_query_generator(hospitals, n=100):
+    """
+    Random query generator to generate queries to be used to test recommendation system
+
+    Parameters:
+        hospitals: hospital information as a Pandas dataframe
+        n: number of random queries to be generated
+
+    Returns:
+        Pandas dataframe of random queries that will be used to test the recommendation system
+    """
     qs = [[random.choice(hospitals["state"].unique()),
            random.randint(int(hospitals["doctors"].min()), 100),
            random.randint(int(hospitals["nurses"].min()), 100),
@@ -121,6 +183,16 @@ def random_query_generator(hospitals, n=100):
 
 @st.cache(ttl=3*60*60, suppress_st_warning=True)
 def generate_recs_base_for_rand_queries(query_list, hospitals):
+    """
+    Generate recommendations for a list of queries, which are actually a Pandas dataframe
+
+    Parameters:
+        query_list: random queries as a Pandas dataframe
+        hospitals: hospital information as a Pandas dataframe
+
+    Returns:
+        Dictionary of recommendations and top rated hospitals for each query
+    """
     query_rec_dict = {}
     for i in range(len(query_list)):
         query = query_list.iloc[i].to_dict()
@@ -134,6 +206,17 @@ def generate_recs_base_for_rand_queries(query_list, hospitals):
 
 @st.cache(ttl=3*60*60, suppress_st_warning=True)
 def evaluation_pre_rec(queries, survey_ratings, n=-1):
+    """
+    Calculate precision and recall at n for each query in queries
+
+    Parameters:
+        queries: Pandas dataframe of random queries that will be used to test the recommendation system
+        survey_ratings: Pandas dataframe of hospital survey ratings and other information
+        n: Top n results to use to calculate precision and recall per query
+
+    Returns:
+        Two lists, one containing the calculated precision of each query and one for the calculated recall of each query
+    """
     pre_at_n, rec_at_n = [], []
     query_rec_base = generate_recs_base_for_rand_queries(queries, survey_ratings)
     for q_id, recs in query_rec_base.items():
@@ -153,6 +236,17 @@ def evaluation_pre_rec(queries, survey_ratings, n=-1):
 
 @st.cache(ttl=3*60*60, suppress_st_warning=True)
 def evaluation_mean_avg_pre(queries, survey_ratings, cutoff=-1):
+    """
+    Calculate (mean) average precision for each query in queries
+
+    Parameters:
+        queries: Pandas dataframe of random queries that will be used to test the recommendation system
+        survey_ratings: Pandas dataframe of hospital survey ratings and other information
+        cutoff: Top n results to use to calculate average precision per query
+
+    Returns:
+        List of average precisions for each query and the mean average precision
+    """
     avg_pre = []
     all_pres = []
     query_rec_base = generate_recs_base_for_rand_queries(queries, survey_ratings)
@@ -184,6 +278,18 @@ def evaluation_mean_avg_pre(queries, survey_ratings, cutoff=-1):
 
 @st.cache(ttl=3*60*60, suppress_st_warning=True)
 def evaluation_ndcg(queries, survey_ratings, n=-1, base=2):
+    """
+    Calculate NDCG at n for each query in queries
+
+    Parameters:
+        queries: Pandas dataframe of random queries that will be used to test the recommendation system
+        survey_ratings: Pandas dataframe of hospital survey ratings and other information
+        n: Top n results to use to calculate nDCG per query
+        base: Base of the logarithm function used to discount relevance scores
+
+    Returns:
+        List of nDCGs for each query
+    """
     ndcg = []
     query_rec_base = generate_recs_base_for_rand_queries(queries, survey_ratings)
     for q_id, recs in query_rec_base.items():
@@ -221,6 +327,19 @@ def evaluation_ndcg(queries, survey_ratings, n=-1, base=2):
 
 @st.cache(ttl=3*60*60, suppress_st_warning=True)
 def add_metrics_to_queries(queries, pre_at_n, rec_at_n, avg_pre, ndcg):
+    """
+    Add the evaluation metrics to the queries dataframe
+
+    Parameters:
+        queries: Pandas dataframe of random queries that was used to test the recommendation system
+        pre_at_n: List of precisions (one entry per query)
+        rec_at_n: List or recalls (one entry per query)
+        avg_pre: List of average precisions (one entry per query)
+        ndcg: List of nDCG (one entry per query)
+
+    Returns:
+        Pandas dataframe containing queries and metrics
+    """
     query_metrics = queries.copy(deep=True)
     query_metrics["Precision"] = pre_at_n
     query_metrics["Recall"] = rec_at_n
@@ -230,6 +349,19 @@ def add_metrics_to_queries(queries, pre_at_n, rec_at_n, avg_pre, ndcg):
 
 
 def recommend_hospitals(hospitals, user, num_recommendations=5):
+    """
+    Generate hospital recommendations using cosine similarity.
+    Hospitals are first filtered by the user-specified state and then cosine similarity is taken between user entered
+    parameters and hospital ratings for doctor_rating, nurses_rating, staff_rating, and patient_rating.
+
+    Parameters:
+        hospitals: Pandas dataframe of hospital survey ratings and other information
+        user: Dictionary of user data containing parameters specified by the user (state, doctor_rating, nurses_rating, staff_rating, patient_rating)
+        num_recommendations: Number of recommendations to generate
+
+    Returns:
+        Pandas dataframe of the top num_recommendations recommended hospitals
+    """
     collab_filtered = hospitals[hospitals['state'] == user["selected_state"]]
     hospital_arr = collab_filtered[['doctors', 'nurses', 'staffs', 'patients']].to_numpy()
     user_arr = np.array([user['doctor_rating'],
@@ -240,6 +372,7 @@ def recommend_hospitals(hospitals, user, num_recommendations=5):
     collab_filtered['Cosine Similarity'] = cosim
     final = collab_filtered.sort_values('Cosine Similarity', ascending=False).reset_index().iloc[0:num_recommendations]
     return final
+
 
 def main():
     st.set_page_config(
@@ -333,10 +466,10 @@ def main():
         """
         #### Patient Survey (HCAHPS)
         The CMS HCAHPS patient survey data is a national, standardized survey of hospital patients attaining ratings about 
-        their recent inpatient hospital stay experiences. Each hospital facility ID has 24 distinct measures tracking 
+        their recent inpatient hospital stay experiences. Each hospital facility ID has 22 distinct measures tracking 
         patient experience. The patient experiences questions can be broken down into twelve different categories of 
         ratings per Facility ID and obtain metrics on patients. The data dictionary describing the survey fields can be 
-        found at https://data.cms.gov/provider-data/sites/default/files/data_dictionaries/hospital/HospitalCompare-DataDictionary.pdf
+        found on Page 90 of https://data.cms.gov/provider-data/sites/default/files/data_dictionaries/hospital/HospitalCompare-DataDictionary.pdf
         """)
     st.markdown(
         """
@@ -438,16 +571,17 @@ def main():
     st.altair_chart((pre_hist | rec_hist) & (scatter | avg_pre_hist) & ndcg_hist, use_container_width=True)
     st.caption("Compiled performance metrics for test queries")
     st.markdown(
-        """
-        Precision and Recall for more than half our test queries was less than 0.1 while the metrics for the other half of 
-        the batch were spread unevenly across the remainder of the range. Along similar lines, the MAP for ~70% of the test 
-        queries was 0.1 or lower. However, the nDCG results were spread more evenly across the range in comparison even 
-        though the majority score was less than 0.5, indicating that our system provided only about 50% of the best ranking 
-        possible.
+        """        
+        Precision and Recall for majority of our test queries was less than 0.1 while the metrics for the other half of 
+        the batch were spread unevenly across the remainder of the range. Along similar lines, the Average Precision 
+        for ~60% of the test queries was 0.1 or lower, resulting in a Mean Average Precision of only 0.16 for our 
+        system. The nDCG results, however, were spread more evenly across the range in comparison even though the 
+        majority score was 0.5 or less, indicating that our system provided only about 50% of the best ranking possible 
+        on an average.
         
         These results indicate that our hospital recommendations are not particularly in line with the hospitals ranked 
-        highest as per the CMS ratings. This could be due to additional survey parameters that we have taken into account 
-        as they might differ in comparison to the hospital overall rating being used as the base.
+        highest as per the CMS ratings. This could be due to additional survey parameters that we have taken into 
+        account as they might differ in comparison to the hospital overall rating being used as the base.
         """)
 
     st.header("V. Mapping Recommended Hospital Locations and Ease of Practical Use")
@@ -468,7 +602,7 @@ def main():
         Users can change inputs and regenerated new recommendations at any time just by changing their inputs in the form 
         and hitting "Generate Recommendations" again.
         
-        To test this functionality, you can use the form provide below. The page will be updated any time you hit the 
+        To test this functionality, you can use the form provided below. The page will be updated any time you hit the 
         Generate Recommendations button.
         """)
     community_data = gather_covid_data()
@@ -552,7 +686,7 @@ def main():
     st.subheader("Increasing Model Parameters")
     st.markdown(
         """
-        Currently, our model accounts for 14/24 questions asked within the CMS HCAHPS survey. We could increase additional 
+        Currently, our model accounts for 14/22 questions asked within the CMS HCAHPS survey. We could increase additional 
         model parameters to capture all survey responses and further isolate buckets of questions. For instance, there are 
         a number of patient ratings about receiving timely medication, which can become a standalone parameter. Other 
         parameters could include overall hospital, comprising patient ratings on hospital cleanliness, ambiance, and 

@@ -7,32 +7,28 @@ import requests
 
 
 def query_arcgis_feature_server(url_feature_server=''):
-    '''
+    """
     This function downloads all of the features available on a given ArcGIS
     feature server. The function is written to bypass the limitations imposed
     by the online service, such as only returning up to 1,000 or 2,000 featues
     at a time.
-    https://gis.stackexchange.com/questions/266897/how-to-get-around-the-1000-objectids-limit-on-arcgis-server
 
-    Parameters
-    ----------
-    url_feature_server : string
-        Sting containing the URL of the service API you want to query. It should
-        end in a forward slash and look something like this:
-        'https://services.arcgis.com/P3ePLMYs2RVChkJx/arcgis/rest/services/USA_Counties/FeatureServer/0/'
+    Parameters:
+        url_feature_server : string
+            Sting containing the URL of the service API you want to query. It should
+            end in a forward slash and look something like this:
+            'https://services.arcgis.com/P3ePLMYs2RVChkJx/arcgis/rest/services/USA_Counties/FeatureServer/0/'
 
-    Returns
-    -------
-    geodata_final : gpd.GeoDataFrame
-        This is a GeoDataFrame that contains all of the features from the
-        Feature Server. After calling this function, the `geodata_final` object
-        can be used to store the data on disk in several different formats
-        including, but not limited to, Shapefile (.shp), GeoJSON (.geojson),
-        GeoPackage (.gpkg), or PostGIS.
-        See https://geopandas.org/en/stable/docs/user_guide/io.html#writing-spatial-data
-        for more details.
-
-    '''
+    Returns:
+        geodata_final : gpd.GeoDataFrame
+            This is a GeoDataFrame that contains all of the features from the
+            Feature Server. After calling this function, the `geodata_final` object
+            can be used to store the data on disk in several different formats
+            including, but not limited to, Shapefile (.shp), GeoJSON (.geojson),
+            GeoPackage (.gpkg), or PostGIS.
+            See https://geopandas.org/en/stable/docs/user_guide/io.html#writing-spatial-data
+            for more details.
+    """
     if url_feature_server == '':
         geodata_final = gpd.GeoDataFrame()
         return geodata_final
@@ -161,6 +157,16 @@ def query_arcgis_feature_server(url_feature_server=''):
 
 
 def query_cms_api(url):
+    """
+    Perform and API call to a CMS API endpoint. Designed to work where API call being used returns a CSV file as the
+    text
+
+    Parameters:
+        url: CMS API endpoint to query
+
+    Returns:
+        Response from CMS API endpoint in a Pandas dataframe
+    """
     response = requests.get(url)
     reader = csv.reader(response.text.splitlines())
     rows = []
