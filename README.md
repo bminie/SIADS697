@@ -21,7 +21,7 @@ It's highly recommended that you use a virtual environment when working with the
 
 Using either the requirements.txt or environment.yml file, create a virtual environment using conda
 ```commandline
-conda env create -f environment.yml python=3.9
+conda env create -f conda_environment.yml python=3.9
 conda create --name <env_name> --file requirements.txt python=3.9
 ```
 ### Starting the Streamlit App
